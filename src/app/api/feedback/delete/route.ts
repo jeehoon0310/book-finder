@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse('권한이 없습니다.', { status: 403 })
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('feedback')
     .delete()
     .eq('id', id)

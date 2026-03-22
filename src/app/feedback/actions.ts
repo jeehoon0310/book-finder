@@ -2,7 +2,7 @@
 
 import { createHash } from 'crypto'
 import { revalidatePath } from 'next/cache'
-import { supabase } from '@/lib/supabase'
+import { supabase, supabaseAdmin } from '@/lib/supabase'
 import { sendTelegramMessage } from '@/lib/telegram'
 import { containsBadWord } from '@/lib/bad-words'
 
@@ -109,7 +109,7 @@ export async function deleteFeedback(id: string, password: string) {
     return { success: false, error: '비밀번호가 일치하지 않습니다.' }
   }
 
-  const { error } = await supabase.from('feedback').delete().eq('id', id)
+  const { error } = await supabaseAdmin.from('feedback').delete().eq('id', id)
   if (error) {
     return { success: false, error: '삭제에 실패했습니다.' }
   }
@@ -141,7 +141,7 @@ export async function editFeedback(id: string, password: string, newContent: str
     return { success: false, error: '비밀번호가 일치하지 않습니다.' }
   }
 
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from('feedback')
     .update({ content: newContent.trim() })
     .eq('id', id)
