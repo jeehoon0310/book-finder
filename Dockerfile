@@ -1,11 +1,12 @@
 FROM node:18-alpine AS builder
 WORKDIR /app
+ENV PATH="/app/node_modules/.bin:$PATH"
 COPY package*.json ./
-RUN npm ci --include=dev
+RUN npm ci
 COPY . .
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-RUN npm run build
+RUN npx next build
 
 FROM node:18-alpine AS runner
 WORKDIR /app
