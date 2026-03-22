@@ -28,6 +28,10 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh '''
+                    # Stop docker-compose managed container if running
+                    docker stop book-finder-book-finder-1 || true
+                    docker rm book-finder-book-finder-1 || true
+                    # Stop standalone container if running
                     docker stop book-finder || true
                     docker rm book-finder || true
                     docker run -d \
