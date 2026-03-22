@@ -1,0 +1,9 @@
+node_modules
+.next
+.git
+.omc
+.playwright-mcp
+.env.local
+.env.production
+scripts/
+*.png

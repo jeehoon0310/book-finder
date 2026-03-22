@@ -1,6 +1,7 @@
 node_modules
 .next
 .env.local
+.env.production
 .omc
 .playwright-mcp
 next-env.d.ts
