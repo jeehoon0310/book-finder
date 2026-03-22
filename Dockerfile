@@ -1,14 +1,13 @@
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
-ENV PATH="/app/node_modules/.bin:$PATH"
 COPY package*.json ./
 RUN npm ci
 COPY . .
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
-RUN npx next build
+RUN ./node_modules/.bin/next build
 
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/.next/standalone ./
