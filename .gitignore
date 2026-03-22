@@ -1,1 +1,9 @@
 node_modules
+.next
+.env.local
+.omc
+.playwright-mcp
+next-env.d.ts
+scripts/
+check-covers.js
+homepage-1.png
