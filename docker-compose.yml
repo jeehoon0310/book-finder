@@ -3,10 +3,12 @@ services:
     build:
       context: .
       args:
-        NEXT_PUBLIC_SUPABASE_URL: "https://sryqiljtqfplyzebnlgh.supabase.co"
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNyeXFpbGp0cWZwbHl6ZWJubGdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5ODk2NDQsImV4cCI6MjA4OTU2NTY0NH0.OuzBiptnfEFGVneBG5iDQTrCFBifL5M-vvgC_btjRRE"
-    ports:
-      - "3000:3000"
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    network_mode: host
     env_file:
       - .env.production
+    environment:
+      - HOSTNAME=0.0.0.0
+      - NODE_OPTIONS=--dns-result-order=ipv4first --no-network-family-autoselection
     restart: unless-stopped

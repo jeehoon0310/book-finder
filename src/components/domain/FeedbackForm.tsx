@@ -18,13 +18,15 @@ export function FeedbackForm() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [password, setPassword] = useState('')
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!content.trim() || isSubmitting) return
 
     setError(null)
     setIsSubmitting(true)
-    const result = await submitFeedback({ nickname, category, content })
+    const result = await submitFeedback({ nickname, category, content, password })
     setIsSubmitting(false)
 
     if (result.success) {
@@ -39,6 +41,7 @@ export function FeedbackForm() {
     setNickname('')
     setCategory('suggestion')
     setContent('')
+    setPassword('')
     setError(null)
   }
 
@@ -116,6 +119,25 @@ export function FeedbackForm() {
             maxLength={1000}
             className="w-full px-3 py-2 text-sm rounded-lg border border-border/60 bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 placeholder:text-muted-foreground/60 resize-none"
           />
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">
+            비밀번호 <span className="text-muted-foreground font-normal">(선택)</span>
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="4자리 이상"
+            maxLength={20}
+            className="w-full px-3 py-2 text-sm rounded-lg border border-border/60 bg-muted/50 focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 placeholder:text-muted-foreground/60"
+          />
+          {!password.trim() && (
+            <p className="text-xs text-yellow-500 mt-1.5">
+              비밀번호를 설정하지 않으면 누구나 수정/삭제할 수 있습니다.
+            </p>
+          )}
         </div>
 
         {error && (

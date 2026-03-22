@@ -49,6 +49,7 @@ export interface Database {
           category: string
           content: string
           is_hidden: boolean
+          password_hash: string | null
           created_at: string
         }
         Insert: {
@@ -56,12 +57,14 @@ export interface Database {
           category?: string
           content: string
           is_hidden?: boolean
+          password_hash?: string | null
         }
         Update: {
           nickname?: string
           category?: string
           content?: string
           is_hidden?: boolean
+          password_hash?: string | null
         }
       }
       purchase_requests: {

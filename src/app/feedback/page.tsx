@@ -12,6 +12,11 @@ export default async function FeedbackPage() {
     .order('created_at', { ascending: false })
     .limit(50)
 
+  const safeFeedback = (feedback || []).map(({ password_hash, ...rest }) => ({
+    ...rest,
+    has_password: !!password_hash,
+  }))
+
   return (
     <div className="container mx-auto px-4 py-8 flex flex-col gap-8 max-w-2xl">
       <section>
@@ -25,7 +30,7 @@ export default async function FeedbackPage() {
 
       <section>
         <h2 className="text-lg font-semibold mb-4">등록된 의견</h2>
-        <FeedbackList initialFeedback={feedback || []} />
+        <FeedbackList initialFeedback={safeFeedback} />
       </section>
     </div>
   )
