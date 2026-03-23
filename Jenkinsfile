@@ -10,7 +10,7 @@ pipeline {
             steps {
                 git branch: 'main',
                     url: 'https://github.com/jeehoon0310/book-finder.git',
-                    credentialsId: 'github-credentials'
+                    credentialsId: 'github-pat'
             }
         }
 
