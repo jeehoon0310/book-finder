@@ -17,17 +17,9 @@ pipeline {
         stage('Sync to App Directory') {
             steps {
                 sh '''
-                    # Copy checkout to app dir, preserving local env files
-                    cp -f ${WORKSPACE}/Dockerfile ${APP_DIR}/
-                    cp -f ${WORKSPACE}/docker-compose.yml ${APP_DIR}/
-                    cp -f ${WORKSPACE}/package.json ${APP_DIR}/
-                    cp -f ${WORKSPACE}/package-lock.json ${APP_DIR}/
-                    cp -f ${WORKSPACE}/tsconfig.json ${APP_DIR}/
-                    cp -f ${WORKSPACE}/next.config.mjs ${APP_DIR}/
-                    cp -f ${WORKSPACE}/postcss.config.mjs ${APP_DIR}/
-                    cp -f ${WORKSPACE}/components.json ${APP_DIR}/ 2>/dev/null || true
-                    cp -rf ${WORKSPACE}/src ${APP_DIR}/
-                    cp -f ${WORKSPACE}/.dockerignore ${APP_DIR}/ 2>/dev/null || true
+                    # Sync checkout to app dir, preserving local-only files (.env.production etc.)
+                    rsync -av --exclude='.env*' --exclude='.git' --exclude='node_modules' \
+                        ${WORKSPACE}/ ${APP_DIR}/
                 '''
             }
         }
