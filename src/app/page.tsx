@@ -28,7 +28,7 @@ async function PopularBooks() {
       <div className="flex overflow-x-auto gap-4 pb-4 snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
         {popularBooks.map(book => (
           <div key={book.id} className="min-w-[140px] w-[140px] sm:min-w-[160px] sm:w-[160px] snap-start shrink-0">
-            <BookCard book={book} />
+            <BookCard book={book} trackPopular />
           </div>
         ))}
       </div>

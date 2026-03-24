@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { SearchX, ShoppingCart } from 'lucide-react';
+import Link from 'next/link';
+import { SearchX, ShoppingCart, MessageSquarePlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 import { BookCard } from './BookCard';
@@ -136,6 +137,13 @@ function EmptySearchState({ searchTerm }: { searchTerm?: string }) {
         <p className="text-xs text-muted-foreground">
           요청해주시면 입고를 검토하겠습니다
         </p>
+        <Link
+          href="/feedback"
+          className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground hover:text-primary transition-colors"
+        >
+          <MessageSquarePlus className="w-3.5 h-3.5" />
+          의견함에 구매 요청을 남겨주셔도 좋아요!
+        </Link>
       </div>
       <PurchaseRequestDialog
         open={showRequest}

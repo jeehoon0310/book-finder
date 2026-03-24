@@ -15,15 +15,26 @@ type Book = Database['public']['Tables']['books']['Row'];
 interface BookCardProps {
   book: Book;
   compact?: boolean;
+  trackPopular?: boolean;
 }
 
-export function BookCard({ book, compact = false }: BookCardProps) {
+export function BookCard({ book, compact = false, trackPopular = false }: BookCardProps) {
   const [showDescription, setShowDescription] = useState(false);
   const hasDescription = !!book.description;
 
+  const handleClick = () => {
+    if (trackPopular) {
+      fetch('/api/track/popular', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookTitle: book.title }),
+      }).catch(() => {});
+    }
+  };
+
   return (
     <>
-      <Link href={`/book/${book.id}`} className="block h-full group">
+      <Link href={`/book/${book.id}`} className="block h-full group" onClick={handleClick}>
         <Card className="h-full overflow-hidden border-border/40 bg-card/50 hover:bg-card hover:border-primary/50 transition-all duration-300">
           <CardContent className="p-0 flex flex-col h-full">
             {/* Cover Image or Placeholder */}

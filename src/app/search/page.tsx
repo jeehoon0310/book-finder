@@ -1,6 +1,8 @@
 import { Suspense } from 'react';
+import { headers } from 'next/headers';
 import { supabase } from '@/lib/supabase';
 import { engToKor, korToEng, isAllEnglish, hasKorean } from '@/lib/hangul';
+import { logSearch } from '@/lib/search-logger';
 import { SearchBar } from '@/components/domain/SearchBar';
 import { InfiniteBookList } from '@/components/domain/InfiniteBookList';
 import { BookListSkeleton } from '@/components/domain/BookListSkeleton';
@@ -78,6 +80,22 @@ async function SearchResults({ query, zone }: { query: string; zone: string }) {
         convertedHint = converted;
       }
     }
+  }
+
+  // Log search query (fire-and-forget)
+  if (query) {
+    const headersList = await headers();
+    logSearch({
+      searchTerm: query,
+      actualSearchTerm: convertedHint || undefined,
+      resultCount: initialBooks.length,
+      wasConverted: !!convertedHint,
+      zoneFilter: zone || undefined,
+      userAgent: headersList.get('user-agent') || undefined,
+      ip: headersList.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || headersList.get('x-real-ip')
+        || undefined,
+    });
   }
 
   return (

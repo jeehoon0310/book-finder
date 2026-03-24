@@ -77,6 +77,29 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['purchase_requests']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['purchase_requests']['Insert']>
       }
+      search_logs: {
+        Row: {
+          id: string
+          search_term: string
+          actual_search_term: string | null
+          result_count: number
+          was_converted: boolean
+          zone_filter: string | null
+          user_agent: string | null
+          ip_hash: string | null
+          created_at: string
+        }
+        Insert: {
+          search_term: string
+          actual_search_term?: string | null
+          result_count?: number
+          was_converted?: boolean
+          zone_filter?: string | null
+          user_agent?: string | null
+          ip_hash?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['search_logs']['Insert']>
+      }
       shelf_locations: {
         Row: {
           id: string
