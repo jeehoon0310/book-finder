@@ -9,23 +9,83 @@ export default async function AnalyticsPage(props: {
   const searchParams = await props.searchParams;
   const days = typeof searchParams.days === 'string' ? parseInt(searchParams.days) : 30;
 
-  const [topTerms, zeroResults, dailyVolume, recentSearches] = await Promise.all([
-    supabaseAdmin.rpc('analytics_top_terms', { days_back: days, term_limit: 20 }),
-    supabaseAdmin.rpc('analytics_zero_results', { days_back: days, term_limit: 20 }),
-    supabaseAdmin.rpc('analytics_daily_volume', { days_back: days }),
-    supabaseAdmin.rpc('analytics_recent_searches', { search_limit: 50 }),
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+  const sinceISO = since.toISOString();
+
+  const [allLogs, recentLogs] = await Promise.all([
+    supabaseAdmin
+      .from('search_logs')
+      .select('search_term, result_count, was_converted, zone_filter, created_at')
+      .gte('created_at', sinceISO)
+      .order('created_at', { ascending: false })
+      .limit(5000),
+    supabaseAdmin
+      .from('search_logs')
+      .select('search_term, result_count, was_converted, zone_filter, created_at')
+      .order('created_at', { ascending: false })
+      .limit(50),
   ]);
 
-  const topData = (topTerms.data || []) as { search_term: string; count: number; avg_results: number; zero_count: number }[];
-  const zeroData = (zeroResults.data || []) as { search_term: string; count: number; last_searched: string }[];
-  const dailyData = (dailyVolume.data || []) as { day: string; total_searches: number; unique_terms: number; zero_result_searches: number }[];
-  const recentData = (recentSearches.data || []) as { search_term: string; result_count: number; was_converted: boolean; zone_filter: string | null; created_at: string }[];
+  const logs = allLogs.data || [];
+  const recentData = (recentLogs.data || []) as { search_term: string; result_count: number; was_converted: boolean; zone_filter: string | null; created_at: string }[];
 
-  const totalSearches = dailyData.reduce((sum, d) => sum + Number(d.total_searches), 0);
-  const totalUniqueTerms = topData.length;
-  const totalZeroResults = dailyData.reduce((sum, d) => sum + Number(d.zero_result_searches), 0);
+  // Aggregate top terms
+  const termMap = new Map<string, { count: number; totalResults: number; zeroCount: number }>();
+  for (const log of logs) {
+    const existing = termMap.get(log.search_term);
+    if (existing) {
+      existing.count++;
+      existing.totalResults += log.result_count;
+      if (log.result_count === 0) existing.zeroCount++;
+    } else {
+      termMap.set(log.search_term, { count: 1, totalResults: log.result_count, zeroCount: log.result_count === 0 ? 1 : 0 });
+    }
+  }
+  const topData = Array.from(termMap.entries())
+    .map(([search_term, d]) => ({ search_term, count: d.count, avg_results: Math.round(d.totalResults / d.count), zero_count: d.zeroCount }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20);
+
+  // Aggregate zero-result searches
+  const zeroMap = new Map<string, { count: number; last_searched: string }>();
+  for (const log of logs) {
+    if (log.result_count !== 0) continue;
+    const existing = zeroMap.get(log.search_term);
+    if (existing) {
+      existing.count++;
+      if (log.created_at > existing.last_searched) existing.last_searched = log.created_at;
+    } else {
+      zeroMap.set(log.search_term, { count: 1, last_searched: log.created_at });
+    }
+  }
+  const zeroData = Array.from(zeroMap.entries())
+    .map(([search_term, d]) => ({ search_term, ...d }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 20);
+
+  // Aggregate daily volume
+  const dayMap = new Map<string, { total: number; terms: Set<string>; zeros: number }>();
+  for (const log of logs) {
+    const day = log.created_at.slice(0, 10);
+    const existing = dayMap.get(day);
+    if (existing) {
+      existing.total++;
+      existing.terms.add(log.search_term);
+      if (log.result_count === 0) existing.zeros++;
+    } else {
+      dayMap.set(day, { total: 1, terms: new Set([log.search_term]), zeros: log.result_count === 0 ? 1 : 0 });
+    }
+  }
+  const dailyData = Array.from(dayMap.entries())
+    .map(([day, d]) => ({ day, total_searches: d.total, unique_terms: d.terms.size, zero_result_searches: d.zeros }))
+    .sort((a, b) => a.day.localeCompare(b.day));
+
+  const totalSearches = logs.length;
+  const totalUniqueTerms = termMap.size;
+  const totalZeroResults = logs.filter(l => l.result_count === 0).length;
   const zeroRate = totalSearches > 0 ? Math.round((totalZeroResults / totalSearches) * 100) : 0;
-  const maxDaily = Math.max(...dailyData.map(d => Number(d.total_searches)), 1);
+  const maxDaily = Math.max(...dailyData.map(d => d.total_searches), 1);
 
   const periodOptions = [7, 14, 30, 90];
 
