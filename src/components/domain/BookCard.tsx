@@ -56,8 +56,12 @@ export function BookCard({ book, compact = false, trackPopular = false }: BookCa
               {/* Overlay Badges */}
               <div className="absolute top-2 right-2 flex flex-col gap-1 items-end">
                 <ZoneBadge zone={book.shelf_zone} shelfNumber={book.shelf_number} />
-                {book.is_new && <Badge className="bg-blue-500 text-white hover:bg-blue-600 shadow-sm border-none">NEW</Badge>}
-                {book.is_popular && <Badge variant="destructive" className="shadow-sm border-none">BEST</Badge>}
+                {new Date(book.created_at) >= new Date('2026-03-25T00:00:00+09:00') && Date.now() - new Date(book.created_at).getTime() < 30 * 24 * 60 * 60 * 1000 && <Badge className="bg-blue-500 text-white hover:bg-blue-600 shadow-sm border-none">NEW</Badge>}
+                {book.is_popular && book.trending_rank ? (
+                  <Badge variant="destructive" className="shadow-sm border-none">#{book.trending_rank}</Badge>
+                ) : book.is_popular ? (
+                  <Badge variant="destructive" className="shadow-sm border-none">BEST</Badge>
+                ) : null}
               </div>
 
               {/* Description Button */}

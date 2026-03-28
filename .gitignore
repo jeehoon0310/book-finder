@@ -1,7 +1,10 @@
 node_modules
 .next
+.env
 .env.local
 .env.production
+build.log
+tsconfig.tsbuildinfo
 .omc
 .playwright-mcp
 next-env.d.ts

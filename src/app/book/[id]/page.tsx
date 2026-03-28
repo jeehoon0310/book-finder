@@ -7,6 +7,7 @@ import { ZoneBadge } from '@/components/domain/ZoneBadge';
 import { BookDescription } from '@/components/domain/BookDescription';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { TrackBookView } from '@/components/domain/TrackBookView';
 
 export default async function BookDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
@@ -38,6 +39,7 @@ export default async function BookDetailPage(props: { params: Promise<{ id: stri
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <TrackBookView bookId={book.id} />
       <Link href="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors">
         <ArrowLeft className="w-5 h-5" />
         돌아가기
@@ -63,7 +65,7 @@ export default async function BookDetailPage(props: { params: Promise<{ id: stri
             )}
             
             <div className="absolute top-3 right-3 flex flex-col gap-2 items-end">
-              {book.is_new && <Badge className="bg-blue-500 text-white shadow-sm border-none pointer-events-none">NEW</Badge>}
+              {new Date(book.created_at) >= new Date('2026-03-25T00:00:00+09:00') && Date.now() - new Date(book.created_at).getTime() < 30 * 24 * 60 * 60 * 1000 && <Badge className="bg-blue-500 text-white shadow-sm border-none pointer-events-none">NEW</Badge>}
               {book.is_popular && <Badge variant="destructive" className="shadow-sm border-none pointer-events-none">BEST</Badge>}
             </div>
           </div>

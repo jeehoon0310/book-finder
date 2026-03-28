@@ -3,6 +3,17 @@ import { timeAgo } from '@/lib/timeago';
 
 export const revalidate = 0;
 
+interface TrendingRow {
+  external_title: string;
+  external_author: string | null;
+  external_rank: number;
+  external_cover_url: string | null;
+  matched_book_id: string | null;
+  match_score: number | null;
+  fetched_date: string;
+  matched_book: { title: string; shelf_zone: string | null } | null;
+}
+
 export default async function AnalyticsPage(props: {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }) {
@@ -13,7 +24,12 @@ export default async function AnalyticsPage(props: {
   since.setDate(since.getDate() - days);
   const sinceISO = since.toISOString();
 
-  const [allLogs, recentLogs] = await Promise.all([
+  const today = new Date().toISOString().slice(0, 10);
+
+  const viewsSince = new Date();
+  viewsSince.setDate(viewsSince.getDate() - days);
+
+  const [allLogs, recentLogs, trendingResult, bookViewsResult] = await Promise.all([
     supabaseAdmin
       .from('search_logs')
       .select('search_term, result_count, was_converted, zone_filter, created_at')
@@ -25,10 +41,46 @@ export default async function AnalyticsPage(props: {
       .select('search_term, result_count, was_converted, zone_filter, created_at')
       .order('created_at', { ascending: false })
       .limit(50),
+    supabaseAdmin
+      .from('trending_rankings')
+      .select('external_title, external_author, external_rank, external_cover_url, matched_book_id, match_score, fetched_date, matched_book:books!matched_book_id(title, shelf_zone)')
+      .eq('fetched_date', today)
+      .order('external_rank', { ascending: true }),
+    supabaseAdmin
+      .rpc('get_customer_popular_books', {
+        since_date: viewsSince.toISOString(),
+        max_results: 20,
+      }),
   ]);
+
+  // 고객 인기 도서 처리
+  const customerPopularRaw = (bookViewsResult.data || []) as { book_id: string; view_count: number }[];
+  let customerPopularData: { rank: number; title: string; zone: string | null; view_count: number }[] = [];
+  if (customerPopularRaw.length > 0) {
+    const cpBookIds = customerPopularRaw.map(r => r.book_id);
+    const { data: cpBooks } = await supabaseAdmin
+      .from('books')
+      .select('id, title, shelf_zone')
+      .in('id', cpBookIds);
+    const cpBookMap = new Map(cpBooks?.map(b => [b.id, b]) || []);
+    customerPopularData = customerPopularRaw.map((r, i) => {
+      const book = cpBookMap.get(r.book_id);
+      return {
+        rank: i + 1,
+        title: book?.title || r.book_id,
+        zone: book?.shelf_zone || null,
+        view_count: Number(r.view_count),
+      };
+    });
+  }
+  const totalBookViews = customerPopularData.reduce((sum, d) => sum + d.view_count, 0);
 
   const logs = allLogs.data || [];
   const recentData = (recentLogs.data || []) as { search_term: string; result_count: number; was_converted: boolean; zone_filter: string | null; created_at: string }[];
+  const trendingData = (trendingResult.data || []) as unknown as TrendingRow[];
+  const trendingMatched = trendingData.filter(t => t.matched_book_id);
+  const trendingUnmatched = trendingData.filter(t => !t.matched_book_id);
+  const trendingLastDate = trendingData.length > 0 ? trendingData[0].fetched_date : null;
 
   // Aggregate top terms
   const termMap = new Map<string, { count: number; totalResults: number; zeroCount: number }>();
@@ -205,6 +257,111 @@ export default async function AnalyticsPage(props: {
           )}
         </div>
       </section>
+
+      {/* Trending Rankings */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-2">📊 외부 인기 순위 현황</h2>
+        <p className="text-xs text-muted-foreground mb-4">알라딘 만화 베스트셀러 기준 {trendingLastDate ? `(${trendingLastDate})` : ''}</p>
+
+        <div className="grid grid-cols-3 gap-4 mb-4">
+          <SummaryCard label="매칭 성공" value={String(trendingMatched.length)} />
+          <SummaryCard label="미매칭" value={String(trendingUnmatched.length)} highlight={trendingUnmatched.length > 20} />
+          <SummaryCard label="마지막 업데이트" value={trendingLastDate || '없음'} />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="pb-2 pr-4">순위</th>
+                <th className="pb-2 pr-4">외부 제목</th>
+                <th className="pb-2 pr-4">매칭 도서</th>
+                <th className="pb-2 pr-4 text-right">점수</th>
+                <th className="pb-2">구역</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trendingData.slice(0, 30).map(row => (
+                <tr key={row.external_rank} className={`border-b border-border/50 ${!row.matched_book_id ? 'bg-yellow-500/5' : ''}`}>
+                  <td className="py-2 pr-4 text-muted-foreground">{row.external_rank}</td>
+                  <td className="py-2 pr-4 font-medium">{row.external_title}</td>
+                  <td className="py-2 pr-4">{row.matched_book ? row.matched_book.title : <span className="text-muted-foreground">—</span>}</td>
+                  <td className="py-2 pr-4 text-right">{row.match_score ? `${Math.round(row.match_score * 100)}%` : '—'}</td>
+                  <td className="py-2">{row.matched_book?.shelf_zone || ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {trendingData.length === 0 && (
+            <p className="text-sm text-muted-foreground py-4 text-center">인기 순위 데이터가 없습니다. Cron이 아직 실행되지 않았을 수 있습니다.</p>
+          )}
+        </div>
+      </section>
+
+      {/* Customer Popular Books */}
+      <section className="mb-8">
+        <h2 className="text-lg font-semibold mb-2">👀 고객 인기 도서</h2>
+        <p className="text-xs text-muted-foreground mb-4">최근 {days}일간 상세 페이지를 가장 많이 본 도서 (고유 방문자 기준)</p>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <SummaryCard label="총 조회 도서" value={String(customerPopularData.length)} />
+          <SummaryCard label="고유 방문자 합계" value={String(totalBookViews)} />
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-muted-foreground">
+                <th className="pb-2 pr-4">#</th>
+                <th className="pb-2 pr-4">제목</th>
+                <th className="pb-2 pr-4">구역</th>
+                <th className="pb-2 text-right">방문자 수</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customerPopularData.map(row => (
+                <tr key={row.rank} className="border-b border-border/50">
+                  <td className="py-2 pr-4 text-muted-foreground">{row.rank}</td>
+                  <td className="py-2 pr-4 font-medium">{row.title}</td>
+                  <td className="py-2 pr-4">{row.zone || ''}</td>
+                  <td className="py-2 text-right">{row.view_count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {customerPopularData.length === 0 && (
+            <p className="text-sm text-muted-foreground py-4 text-center">조회 데이터가 아직 없습니다. 고객이 도서 상세 페이지를 방문하면 데이터가 쌓입니다.</p>
+          )}
+        </div>
+      </section>
+
+      {/* Purchase Recommendations */}
+      {trendingUnmatched.length > 0 && (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold mb-2">🛒 입고 추천 목록</h2>
+          <p className="text-xs text-muted-foreground mb-4">외부 인기작 중 카페에 없는 만화 — 구매 검토 대상</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="pb-2 pr-4">순위</th>
+                  <th className="pb-2 pr-4">제목</th>
+                  <th className="pb-2">저자</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trendingUnmatched.map(row => (
+                  <tr key={row.external_rank} className="border-b border-border/50">
+                    <td className="py-2 pr-4 text-muted-foreground">{row.external_rank}</td>
+                    <td className="py-2 pr-4 font-medium">{row.external_title}</td>
+                    <td className="py-2 text-muted-foreground">{row.external_author || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Recent Searches */}
       <section>

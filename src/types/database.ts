@@ -24,6 +24,8 @@ export interface Database {
           series_name: string | null
           is_new: boolean
           is_popular: boolean
+          trending_rank: number | null
+          customer_popular_rank: number | null
           description: string | null
           tags: string[] | null
           status: string | null
@@ -109,11 +111,60 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['shelf_locations']['Row'], 'id'>
         Update: Partial<Database['public']['Tables']['shelf_locations']['Insert']>
       }
+      book_views: {
+        Row: {
+          id: string
+          book_id: string
+          ip_hash: string | null
+          user_agent: string | null
+          created_at: string
+        }
+        Insert: {
+          book_id: string
+          ip_hash?: string | null
+          user_agent?: string | null
+        }
+        Update: Partial<Database['public']['Tables']['book_views']['Insert']>
+      }
+      trending_rankings: {
+        Row: {
+          id: string
+          source: string
+          external_title: string
+          external_author: string | null
+          external_rank: number
+          external_cover_url: string | null
+          isbn13: string | null
+          matched_book_id: string | null
+          match_score: number | null
+          fetched_date: string
+          created_at: string
+        }
+        Insert: {
+          source?: string
+          external_title: string
+          external_author?: string | null
+          external_rank: number
+          external_cover_url?: string | null
+          isbn13?: string | null
+          matched_book_id?: string | null
+          match_score?: number | null
+          fetched_date?: string
+        }
+        Update: Partial<Database['public']['Tables']['trending_rankings']['Insert']>
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      get_customer_popular_books: {
+        Args: {
+          since_date: string
+          max_results?: number
+        }
+        Returns: { book_id: string; view_count: number }[]
+      }
       search_books: {
         Args: {
           search_term: string

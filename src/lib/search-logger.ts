@@ -32,6 +32,23 @@ export function logPopularClick(entry: { bookTitle: string; userAgent?: string; 
     });
 }
 
+export function logBookView(entry: { bookId: string; userAgent?: string; ip?: string }): void {
+  if (entry.userAgent && BOT_PATTERNS.test(entry.userAgent)) return;
+
+  supabaseAdmin
+    .from('book_views')
+    .insert({
+      book_id: entry.bookId,
+      ip_hash: entry.ip
+        ? createHash('sha256').update(entry.ip).digest('hex')
+        : null,
+      user_agent: entry.userAgent || null,
+    })
+    .then(({ error }) => {
+      if (error) console.error('Book view log failed:', error.message);
+    });
+}
+
 export function logSearch(entry: SearchLogEntry): void {
   // Skip bot traffic
   if (entry.userAgent && BOT_PATTERNS.test(entry.userAgent)) return;

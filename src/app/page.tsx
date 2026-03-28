@@ -16,7 +16,8 @@ async function PopularBooks() {
     .from('books')
     .select('*')
     .eq('is_popular', true)
-    .order('title');
+    .order('trending_rank', { ascending: true, nullsFirst: false })
+    .limit(10);
 
   if (!popularBooks?.length) return null;
 
@@ -29,6 +30,65 @@ async function PopularBooks() {
         {popularBooks.map(book => (
           <div key={book.id} className="min-w-[140px] w-[140px] sm:min-w-[160px] sm:w-[160px] snap-start shrink-0">
             <BookCard book={book} trackPopular />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// 이 날짜 이후 등록된 책만 신간으로 표시 (30일 자동 만료)
+const NEW_ARRIVALS_SINCE = '2026-03-25T00:00:00+09:00';
+
+async function NewBooks() {
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const cutoff = new Date(Math.max(thirtyDaysAgo.getTime(), new Date(NEW_ARRIVALS_SINCE).getTime()));
+
+  const { data: newBooks } = await supabase
+    .from('books')
+    .select('*')
+    .gte('created_at', cutoff.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(10);
+
+  if (!newBooks?.length) return null;
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <span className="text-primary">✨</span> 새로 들어온 신간
+      </h2>
+      <div className="flex overflow-x-auto gap-4 pb-4 snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
+        {newBooks.map(book => (
+          <div key={book.id} className="min-w-[140px] w-[140px] sm:min-w-[160px] sm:w-[160px] snap-start shrink-0">
+            <BookCard book={book} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+async function CustomerPopularBooks() {
+  const { data: customerPopular } = await supabase
+    .from('books')
+    .select('*')
+    .not('customer_popular_rank', 'is', null)
+    .order('customer_popular_rank', { ascending: true })
+    .limit(10);
+
+  if (!customerPopular?.length) return null;
+
+  return (
+    <section className="mt-8">
+      <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+        <span className="text-primary">👀</span> 손님들이 많이 찾는 만화
+      </h2>
+      <div className="flex overflow-x-auto gap-4 pb-4 snap-x -mx-4 px-4 sm:mx-0 sm:px-0">
+        {customerPopular.map(book => (
+          <div key={book.id} className="min-w-[140px] w-[140px] sm:min-w-[160px] sm:w-[160px] snap-start shrink-0">
+            <BookCard book={book} />
           </div>
         ))}
       </div>
@@ -116,7 +176,15 @@ export default async function Home() {
       </Link>
 
       <Suspense fallback={<div className="mt-8"><BookListSkeleton count={6}/></div>}>
+        <NewBooks />
+      </Suspense>
+
+      <Suspense fallback={<div className="mt-8"><BookListSkeleton count={6}/></div>}>
         <PopularBooks />
+      </Suspense>
+
+      <Suspense fallback={<div className="mt-8"><BookListSkeleton count={6}/></div>}>
+        <CustomerPopularBooks />
       </Suspense>
 
       <Suspense fallback={<div className="mt-10"><BookListSkeleton count={12}/></div>}>
