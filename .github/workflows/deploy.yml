@@ -45,15 +45,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Debug SSH connectivity
-        run: |
-          echo "Runner IP: $(curl -sf ifconfig.me)"
-          echo "Resolving host..."
-          nslookup ${{ secrets.SYNOLOGY_HOST }} || true
-          echo "Testing port connectivity..."
-          nc -z -w 10 ${{ secrets.SYNOLOGY_HOST }} ${{ secrets.SYNOLOGY_PORT }} && echo "✅ Port open" || echo "❌ Port closed"
-          echo "Testing with verbose SSH..."
-          ssh -v -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p ${{ secrets.SYNOLOGY_PORT }} ${{ secrets.SYNOLOGY_USERNAME }}@${{ secrets.SYNOLOGY_HOST }} echo "test" 2>&1 || true
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
 
       - name: Deploy to Synology
         uses: appleboy/ssh-action@v1
