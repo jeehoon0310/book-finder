@@ -1,0 +1,19 @@
+services:
+  book-finder:
+    image: ghcr.io/jeehoon0310/book-finder:latest
+    container_name: book-finder
+    network_mode: host
+    env_file:
+      - .env.production
+    environment:
+      - HOSTNAME=0.0.0.0
+      - NODE_OPTIONS=--dns-result-order=ipv4first --no-network-family-autoselection
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"

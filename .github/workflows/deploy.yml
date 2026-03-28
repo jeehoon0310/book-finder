@@ -95,6 +95,16 @@ jobs:
             echo "${{ secrets.GHCR_TOKEN }}" | sudo /usr/local/bin/docker login ghcr.io -u jeehoon0310 --password-stdin
             sudo /usr/local/bin/docker pull ghcr.io/jeehoon0310/book-finder:latest
             cd /volume1/docker/book-finder
+            curl -sfL -H "Authorization: token ${{ secrets.GHCR_TOKEN }}" \
+              "https://raw.githubusercontent.com/jeehoon0310/book-finder/main/docker-compose.prod.yml" \
+              -o docker-compose.yml.new
+            if ! diff -q docker-compose.yml docker-compose.yml.new > /dev/null 2>&1; then
+              echo "📄 docker-compose.yml updated from Git"
+              sudo mv docker-compose.yml.new docker-compose.yml
+            else
+              rm docker-compose.yml.new
+              echo "📄 docker-compose.yml unchanged"
+            fi
             sudo /usr/local/bin/docker compose down
             sudo /usr/local/bin/docker compose up -d
             sudo /usr/local/bin/docker image prune -f
