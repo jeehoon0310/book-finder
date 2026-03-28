@@ -1,0 +1,68 @@
+name: Build & Deploy to Synology
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Synology
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SYNOLOGY_HOST }}
+          username: ${{ secrets.SYNOLOGY_USERNAME }}
+          key: ${{ secrets.SYNOLOGY_SSH_KEY }}
+          port: ${{ secrets.SYNOLOGY_PORT }}
+          script: |
+            echo "${{ secrets.GHCR_TOKEN }}" | sudo /usr/local/bin/docker login ghcr.io -u jeehoon0310 --password-stdin
+            sudo /usr/local/bin/docker pull ghcr.io/jeehoon0310/book-finder:latest
+            cd /volume1/docker/book-finder
+            sudo /usr/local/bin/docker compose down
+            sudo /usr/local/bin/docker compose up -d
+            sudo /usr/local/bin/docker image prune -f
+            for i in $(seq 1 30); do
+              curl -sf http://localhost:3000/api/health && echo " ✅ OK" && exit 0
+              sleep 2
+            done
+            echo "❌ Health check failed"
+            sudo /usr/local/bin/docker logs book-finder --tail=50
+            exit 1
